@@ -1,0 +1,9 @@
+streamlit
+openai
+load_dotenv
+PyPDF2
+python-docx
+python-pptx
+azure-cosmos>=4.5.1
+azure-identity>=1.15.0
+reportlab
