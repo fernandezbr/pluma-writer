@@ -10,8 +10,8 @@ from io import BytesIO
 # --- NEW imports ---
 from datetime import datetime
 from io import BytesIO
-from docx import Document  # (you already import this)
-# PDF (install: pip install reportlab)
+
+# PDF
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import A4
@@ -20,7 +20,19 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import os
 
-
+# --- UI helper: centered "OR" header with lines ---
+def or_header(text: str):
+    st.markdown(
+        """
+        <style>
+        .or-header{display:flex;align-items:center;gap:.75rem;margin:.5rem 0 1rem;}
+        .or-header:before,.or-header:after{content:"";flex:1;border-top:1px solid rgba(128,128,128,.35);}
+        .or-header .or-text{font-weight:600;opacity:.85;}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(f"<div class='or-header'><span class='or-text'>{text}</span></div>", unsafe_allow_html=True)
 
 # App title
 pages.show_home()
@@ -29,17 +41,40 @@ pages.show_sidebar()
 # Home page
 st.header("📝Style Writer")
 
-# Content input
-st.session_state.content = st.text_area(
-    ":blue[**Content Data:**]", st.session_state.content, 200
-)
+# # Content input
+# st.session_state.content = st.text_area(
+#     ":blue[**Content Input for BSP Writing Style:**]", st.session_state.content, 200
+# )
 
-uploaded_files = st.file_uploader(
-    ":blue[**Upload Content Files:**]", 
-    type=["pdf", "docx", "pptx"], 
-    accept_multiple_files=True,
-    help="Upload PDF, Word, or PowerPoint files"
-)
+# uploaded_files = st.file_uploader(
+#     ":blue[**Upload Content Files:**]", 
+#     type=["pdf", "docx", "pptx"], 
+#     accept_multiple_files=True,
+#     help="Upload PDF, Word, or PowerPoint files"
+# )
+or_header("Input the Contents or Upload the File for BSP Style Writing")
+
+# --- two-column layout (Col 1 / Col 2) ---
+col1, col2 = st.columns([3, 2], gap="small")
+
+with col1:
+    
+    st.session_state.content = st.text_area(
+        ":blue[**Input Content:**]",
+        st.session_state.content,
+        height=160,
+        key="content_input",
+    )
+
+with col2:
+    
+    uploaded_files = st.file_uploader(
+        ":blue[**Upload Files:**]",
+        type=["pdf", "docx", "pptx"],
+        accept_multiple_files=True,
+        help="Upload PDF, Word, or PowerPoint files",
+        key="content_upload",
+    )
 
 # Extract text from uploaded files
 extracted_text = ""
@@ -66,8 +101,67 @@ if uploaded_files:
                         if shape.text.strip():
                             extracted_text += shape.text + "\n"
 
+
+# ----------------------------
+# PICK EXACTLY ONE CONTENT SOURCE + PREVIEW
+# ----------------------------
+has_input = bool(st.session_state.content.strip())
+has_uploads = bool(extracted_text.strip())
+
+# Let the user choose if both are present; otherwise auto-pick
+if has_input and has_uploads:
+    source = st.radio(
+        ":blue[**Choose content source**]",
+        ["Uploaded files", "Manual input"],
+        horizontal=True,
+        index=0,
+        help="Use either the text you typed OR the text extracted from the uploaded files."
+    )
+elif has_uploads:
+    source = "Uploaded files"
+elif has_input:
+    source = "Manual input"
+else:
+    source = None
+
+# Decide content_all and show a preview when using uploads
+if source == "Uploaded files":
+    content_all = extracted_text  # keep full unicode; your PDF builder handles fonts
+    with st.expander("📄 Preview: Extracted text from uploaded files", expanded=True):
+        st.text_area(
+            "Extracted Text",
+            content_all,
+            height=240,
+            key="uploaded_text_preview",
+        )
+elif source == "Manual input":
+    content_all = st.session_state.content
+else:
+    content_all = ""
+    st.markdown(
+    """
+    <div class="bsp-alert-red" role="alert">
+      <strong>Heads up:</strong> Provide content — either type in the left box or upload a file on the right.
+    </div>
+    <style>
+      .bsp-alert-red{
+        padding:12px 14px;
+        margin: 4px 0 10px;
+        border-radius:10px;
+        border:1px solid rgba(220,53,69,.35);
+        background: rgba(220,53,69,.08); /* light red */
+        font-size: 0.95rem;
+      }
+      .bsp-alert-red strong{
+        color:#b02a37; /* dark red for emphasis */
+      }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Combine text area and extracted content
-content_all = st.session_state.content + "\n" + extracted_text.encode("ascii", errors="ignore").decode("ascii")
+#content_all = st.session_state.content + "\n" + extracted_text.encode("ascii", errors="ignore").decode("ascii")
 
 # Extracting the styles and creating combined display options
 styles_data = utils.get_styles()
@@ -223,7 +317,12 @@ def make_pdf_bytes(text: str, title: str | None = None) -> bytes:
 if st.button(
     ":blue[**Rewrite Content**]",
     key="extract",
-    disabled=content_all == ""
+   # disabled=content_all == ""
+    disabled=(
+    content_all.strip() == ""
+    or st.session_state.style == ""
+    or st.session_state.example == ""
+)
     or st.session_state.style == ""
     or st.session_state.example == "",
 ):
