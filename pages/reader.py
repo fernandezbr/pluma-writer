@@ -163,8 +163,8 @@ if st.button(
    # disabled=combined_text.strip() == "" or st.session_state.styleName == "",
     disabled=(
     combined_text.strip() == ""
-    or st.session_state.style == ""
-    or st.session_state.example == ""
+    or st.session_state.styleName == ""
+    #or st.session_state.content == ""
 )
 ):
     with st.container(border=True):
