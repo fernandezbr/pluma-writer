@@ -66,6 +66,21 @@ with col1:
         key="content_input",
     )
 
+    max_output_length = st.slider(
+        ":blue[**Output Maximum Character Length:**]", 
+        min_value=20, 
+        max_value=75000, 
+        value=None, 
+        step=None, 
+        format=None, 
+        key=None, 
+        help=None, 
+        on_change=None, 
+        disabled=False, 
+        label_visibility="visible", 
+        width="stretch"
+    )
+
 with col2:
     
     uploaded_files = st.file_uploader(
@@ -330,7 +345,7 @@ if st.button(
         with st.spinner("Processing..."):
             # --- NEW: show the result and download buttons ---
             st.markdown("### ✨ Rewritten Output")
-            output = prompts.rewrite_content(content_all, False)
+            output = prompts.rewrite_content(content_all, max_output_length, False)
             utils.save_output(output, content_all)
 
             # --- NEW: cache for later & build filenames ---
