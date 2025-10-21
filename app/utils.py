@@ -9,6 +9,7 @@ from datetime import datetime
 from openai import AzureOpenAI
 from azure.cosmos import CosmosClient, exceptions, PartitionKey
 from dotenv import load_dotenv
+import hashlib
 # from azure.identity import DefaultAzureCredential
 
 load_dotenv()
@@ -29,6 +30,7 @@ clientAOAI = AzureOpenAI(
 
 # Initialize Azure AD credential
 # credential = DefaultAzureCredential()
+
 
 def ensure_containers_exist():
     try:
@@ -143,7 +145,11 @@ def get_styles():
             return []
             
         # Query items for the current user
-        query = "SELECT * FROM c WHERE c.user_id = @user_id"
+        query = """
+        SELECT * 
+        FROM c 
+        WHERE c.user_id IN (@user_id, 'allbsp')
+        """
         parameters = [{"name": "@user_id", "value": user_id}]
         items = list(styles_container.query_items(
             query=query,
@@ -201,6 +207,8 @@ def save_style(style, combined_text):
             "user_id": user_id,
             "user_name": user_name
         }
+        print("Style:")
+        print(style)
         styles_container.create_item(body=new_style)
     except exceptions.CosmosHttpResponseError as e:
         st.error(f"An error occurred while saving style: {e}")
