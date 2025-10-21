@@ -93,7 +93,6 @@ def get_request(url):
 # chat completion
 def chat(
     messages=[],
-    temperature=0.7,
     streaming=True,
     format="text",
 ):
@@ -105,8 +104,7 @@ def chat(
         for completion in clientAOAI.chat.completions.create(
             model=config["model"],
             messages=messages,
-            temperature=temperature,
-            stream=streaming,
+            stream=True,
             response_format={"type": format},
         ):
 
