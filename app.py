@@ -66,20 +66,56 @@ with col1:
         key="content_input",
     )
 
-    max_output_length = st.slider(
-        ":blue[**Output Maximum Character Length:**]", 
-        min_value=20, 
-        max_value=75000, 
-        value=None, 
-        step=None, 
-        format=None, 
-        key=None, 
-        help=None, 
-        on_change=None, 
-        disabled=False, 
-        label_visibility="visible", 
-        width="stretch"
-    )
+    MIN_LEN, MAX_LEN, DEFAULT_LEN = 20, 75_000, 1_000
+
+    # One source of truth
+    st.session_state.setdefault("max_len", DEFAULT_LEN)
+    st.session_state.setdefault("last_updated", None)
+
+    def _update_from_slider():
+        st.session_state.last_updated = "slider"
+        st.session_state.max_len = st.session_state.max_len_slider
+
+    def _update_from_input():
+        st.session_state.last_updated = "input"
+        v = st.session_state.max_len_input
+        # Coerce + clamp
+        try:
+            v = int(v)
+        except Exception:
+            v = MIN_LEN
+        st.session_state.max_len = max(MIN_LEN, min(MAX_LEN, v))
+
+    # Keep both widgets synced to the source of truth (avoid ping-pong)
+    if st.session_state.last_updated != "slider":
+        st.session_state["max_len_slider"] = st.session_state.max_len
+    if st.session_state.last_updated != "input":
+        st.session_state["max_len_input"] = st.session_state.max_len
+
+    col_slider, col_input = st.columns([3, 1])
+
+    with col_slider:
+        st.slider(
+            ":blue[**Output Maximum Character Length (75,000 Maximum):**]",
+            min_value=MIN_LEN,
+            max_value=MAX_LEN,
+            key="max_len_slider",
+            on_change=_update_from_slider,
+            disabled=False,
+        )
+
+    with col_input:
+        st.number_input(   # use number_input for clean integer UX
+            "No. of Characters",
+            min_value=MIN_LEN,
+            max_value=MAX_LEN,
+            step=1,
+            key="max_len_input",
+            on_change=_update_from_input,
+        )
+
+    # Use this in your app
+    max_output_length = st.session_state.max_len
 
 with col2:
     
